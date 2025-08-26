@@ -1,0 +1,15 @@
+{
+  "files": {
+    "main.css": "/CardPredictor/static/css/main.aa22c4c1.css",
+    "main.js": "/CardPredictor/static/js/main.2d773068.js",
+    "static/js/453.f2c450d3.chunk.js": "/CardPredictor/static/js/453.f2c450d3.chunk.js",
+    "index.html": "/CardPredictor/index.html",
+    "main.aa22c4c1.css.map": "/CardPredictor/static/css/main.aa22c4c1.css.map",
+    "main.2d773068.js.map": "/CardPredictor/static/js/main.2d773068.js.map",
+    "453.f2c450d3.chunk.js.map": "/CardPredictor/static/js/453.f2c450d3.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.aa22c4c1.css",
+    "static/js/main.2d773068.js"
+  ]
+}
