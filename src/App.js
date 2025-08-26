@@ -128,8 +128,8 @@ function App() {
               ) {
                 const relevantStats = playerStatsData.data.filter(
                   (stat) =>
-                    stat.competition_id === league.season_24_25 ||
-                    stat.competition_id === league.season_25_26
+                    stat.competition_id === leagues.season_24_25 ||
+                    stat.competition_id === leagues.season_25_26
                 );
 
                 // Get the highest cards_per_90_overall from relevant seasons
