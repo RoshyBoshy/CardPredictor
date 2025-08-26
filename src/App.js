@@ -85,8 +85,8 @@ function App() {
         throw new Error(`Season IDs not found for league: ${selectedLeague}`);
       }
 
-      let allHomePlayers = [];
-      let allAwayPlayers = [];
+      let homePlayersMap = new Map();
+      let awayPlayersMap = new Map();
 
       for (const seasonId of [league.season_24_25, league.season_25_26]) {
         const leaguePlayersResponse = await fetch(
@@ -95,36 +95,61 @@ function App() {
         const leaguePlayersData = await leaguePlayersResponse.json();
 
         if (leaguePlayersData?.data) {
-          allHomePlayers.push(
-            ...leaguePlayersData.data.filter(
-              (player) =>
-                player.club_team_id &&
-                player.club_team_id.toString() === match.homeID.toString()
-            )
-          );
-          allAwayPlayers.push(
-            ...leaguePlayersData.data.filter(
-              (player) =>
-                player.club_team_id &&
-                player.club_team_id.toString() === match.awayID.toString()
-            )
-          );
+          leaguePlayersData.data.forEach((player) => {
+            if (player.club_team_id?.toString() === match.homeID.toString()) {
+              if (!homePlayersMap.has(player.id)) {
+                homePlayersMap.set(player.id, player);
+              }
+            } else if (
+              player.club_team_id?.toString() === match.awayID.toString()
+            ) {
+              if (!awayPlayersMap.has(player.id)) {
+                awayPlayersMap.set(player.id, player);
+              }
+            }
+          });
         }
       }
 
-      const fetchPlayerStats = async (players) => {
+      const fetchPlayerStats = async (playersMap) => {
         const playersWithStats = [];
-        for (const player of players) {
+        for (const player of playersMap.values()) {
           try {
             const playerStatsResponse = await fetch(
               `/player-stats?key=${API_KEY}&player_id=${player.id}`
             );
             if (playerStatsResponse.ok) {
               const playerStatsData = await playerStatsResponse.json();
-              playersWithStats.push({
-                ...player,
-                stats: playerStatsData?.data,
-              });
+
+              // Filter the array for stats from our league's seasons
+              if (
+                playerStatsData?.data &&
+                Array.isArray(playerStatsData.data)
+              ) {
+                const relevantStats = playerStatsData.data.filter(
+                  (stat) =>
+                    stat.competition_id === league.season_24_25 ||
+                    stat.competition_id === league.season_25_26
+                );
+
+                // Get the highest cards_per_90_overall from relevant seasons
+                let bestStats = relevantStats[0] || {};
+                relevantStats.forEach((stat) => {
+                  if (
+                    parseFloat(stat.cards_per_90_overall || 0) >
+                    parseFloat(bestStats.cards_per_90_overall || 0)
+                  ) {
+                    bestStats = stat;
+                  }
+                });
+
+                playersWithStats.push({
+                  ...player,
+                  stats: bestStats,
+                });
+              } else {
+                playersWithStats.push(player);
+              }
             } else {
               playersWithStats.push(player);
             }
@@ -133,11 +158,17 @@ function App() {
             playersWithStats.push(player);
           }
         }
-        return playersWithStats;
+
+        // Sort by cards per 90 (highest first)
+        return playersWithStats.sort((a, b) => {
+          const aCards = parseFloat(a.stats?.cards_per_90_overall || 0);
+          const bCards = parseFloat(b.stats?.cards_per_90_overall || 0);
+          return bCards - aCards;
+        });
       };
 
-      const homePlayersWithStats = await fetchPlayerStats(allHomePlayers);
-      const awayPlayersWithStats = await fetchPlayerStats(allAwayPlayers);
+      const homePlayersWithStats = await fetchPlayerStats(homePlayersMap);
+      const awayPlayersWithStats = await fetchPlayerStats(awayPlayersMap);
 
       setMatchDetails({
         homePlayers: homePlayersWithStats,
@@ -294,14 +325,26 @@ function App() {
                             </div>
                             <div className="player-stats">
                               {player.stats && (
-                                <div className="stat-row highlight">
-                                  <span className="stat-label">
-                                    Cards per 90:
-                                  </span>
-                                  <span className="stat-value">
-                                    {player.stats.cards_per_90 || "0.00"}
-                                  </span>
-                                </div>
+                                <>
+                                  <div className="stat-row highlight">
+                                    <span className="stat-label">
+                                      Cards per 90:
+                                    </span>
+                                    <span className="stat-value">
+                                      {player.stats.cards_per_90_overall ||
+                                        "0.00"}
+                                    </span>
+                                  </div>
+                                  <div className="stat-row">
+                                    <span className="stat-label">
+                                      Mins per Card:
+                                    </span>
+                                    <span className="stat-value">
+                                      {player.stats.min_per_card_overall ||
+                                        "N/A"}
+                                    </span>
+                                  </div>
+                                </>
                               )}
                             </div>
                           </div>
@@ -325,14 +368,26 @@ function App() {
                             </div>
                             <div className="player-stats">
                               {player.stats && (
-                                <div className="stat-row highlight">
-                                  <span className="stat-label">
-                                    Cards per 90:
-                                  </span>
-                                  <span className="stat-value">
-                                    {player.stats.cards_per_90 || "0.00"}
-                                  </span>
-                                </div>
+                                <>
+                                  <div className="stat-row highlight">
+                                    <span className="stat-label">
+                                      Cards per 90:
+                                    </span>
+                                    <span className="stat-value">
+                                      {player.stats.cards_per_90_overall ||
+                                        "0.00"}
+                                    </span>
+                                  </div>
+                                  <div className="stat-row">
+                                    <span className="stat-label">
+                                      Mins per Card:
+                                    </span>
+                                    <span className="stat-value">
+                                      {player.stats.min_per_card_overall ||
+                                        "N/A"}
+                                    </span>
+                                  </div>
+                                </>
                               )}
                             </div>
                           </div>

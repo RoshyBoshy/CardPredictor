@@ -31,6 +31,51 @@
   text-align: center;
 }
 
+/* League Selection Styles */
+.leagues-container {
+  text-align: center;
+}
+
+.leagues-container h2 {
+  color: #1f2937;
+  font-size: 1.5rem;
+  margin-bottom: 20px;
+}
+
+.leagues-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.league-button {
+  padding: 15px 20px;
+  background-color: #ffffff;
+  border: 2px solid #e5e7eb;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.league-button:hover {
+  background-color: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+}
+
+.league-button.active {
+  background-color: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+}
+
+/* Fixtures Grid */
 .fixtures-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -220,7 +265,7 @@
 }
 
 .players-list {
-  max-height: 300px;
+  max-height: 400px;
   overflow-y: auto;
 }
 
@@ -319,6 +364,10 @@
   }
 
   .fixtures-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .leagues-grid {
     grid-template-columns: 1fr;
   }
 
