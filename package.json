@@ -1,7 +1,7 @@
 {
   "name": "football-card-stats",
   "version": "0.1.0",
-  "homepage": "https://[RoshyBoshy].github.io/CardPredictor",
+  "homepage": "https://RoshyBoshy.github.io/CardPredictor",
   "proxy": "https://api.football-data-api.com",
   "private": true,
   "dependencies": {
