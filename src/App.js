@@ -52,7 +52,7 @@ function App() {
       const maxTime = Math.floor((Date.now() + 7 * 24 * 60 * 60 * 1000) / 1000);
 
       const response = await fetch(
-        `/league-matches?key=${API_KEY}&season_id=${seasonId}`
+        `/api/league-matches?key=${API_KEY}&season_id=${seasonId}`
       );
 
       if (response.ok) {
@@ -90,7 +90,7 @@ function App() {
 
       for (const seasonId of [league.season_24_25, league.season_25_26]) {
         const leaguePlayersResponse = await fetch(
-          `/league-players?key=${API_KEY}&season_id=${seasonId}`
+          `/api/league-players?key=${API_KEY}&season_id=${seasonId}`
         );
         const leaguePlayersData = await leaguePlayersResponse.json();
 
@@ -116,7 +116,7 @@ function App() {
         for (const player of playersMap.values()) {
           try {
             const playerStatsResponse = await fetch(
-              `/player-stats?key=${API_KEY}&player_id=${player.id}`
+              `/api/player-stats?key=${API_KEY}&player_id=${player.id}`
             );
             if (playerStatsResponse.ok) {
               const playerStatsData = await playerStatsResponse.json();
