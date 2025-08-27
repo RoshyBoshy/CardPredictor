@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./App.css";
 
 function App() {
@@ -8,65 +8,183 @@ function App() {
   const [selectedMatch, setSelectedMatch] = useState(null);
   const [matchDetails, setMatchDetails] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
-  const [selectedLeague, setSelectedLeague] = useState(null);
+  const [selectedDate, setSelectedDate] = useState(null);
 
   const API_KEY =
     "36bea08546e20a5c858b6239f3dc5c55c9900b890ac6d0482f1cb802bd9ea9ae";
 
-  const leagues = {
-    "Premier League": {
-      season_24_25: 12325,
-      season_25_26: 15050,
-    },
-    Bundesliga: {
-      season_24_25: 12529,
-      season_25_26: 14968,
-    },
-    "La Liga": {
-      season_24_25: 12316,
-      season_25_26: 14956,
-    },
-    "Ligue 1": {
-      season_24_25: 12337,
-      season_25_26: 14932,
-    },
-    "Serie A": {
-      season_24_25: 12530,
-      season_25_26: 15068,
-    },
+  const API_BASE_URL = "/api";
+
+  // Competition ID to Name mapping
+  const COMPETITION_MAP = {
+    // England
+    15050: "Premier League",
+    14930: "Championship",
+    15137: "League Cup",
+    15238: "FA Cup",
+
+    // Europe
+    14924: "UEFA Champions League",
+    15002: "UEFA Europa League",
+    14904: "UEFA Europa Conference League",
+
+    // France
+    14932: "Ligue 1",
+
+    // Germany
+    14968: "Bundesliga",
+    15034: "DFL Super Cup",
+    15035: "DFB Pokal",
+
+    // Italy
+    15068: "Serie A",
+    15037: "Coppa Italia",
+    15866: "Primavera Cup",
+
+    // Spain
+    14956: "La Liga",
   };
 
-  const fetchMatchesForLeague = async (leagueName) => {
+  // Generate next 7 days
+  const getNext7Days = () => {
+    const days = [];
+    const today = new Date();
+
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() + i);
+      days.push({
+        date: date.toISOString().split("T")[0], // YYYY-MM-DD format
+        displayDate: date.toDateString(),
+        shortDate: `${date.getDate()} ${date.toLocaleString("default", {
+          month: "short",
+        })}`,
+        dayOfWeek: date.toLocaleString("default", { weekday: "short" }),
+        isToday: i === 0,
+      });
+    }
+    return days;
+  };
+
+  const next7Days = getNext7Days();
+
+  // Auto-load today's matches on component mount
+  useEffect(() => {
+    const today = next7Days[0];
+    if (today) {
+      fetchMatchesForDate(today.date, today.displayDate);
+    }
+  }, []); // Empty dependency array means this runs once on mount
+
+  const fetchMatchesForDate = async (dateStr, displayDate) => {
     try {
       setLoading(true);
-      setSelectedLeague(leagueName);
+      setSelectedDate({ date: dateStr, displayDate });
       setMatches([]);
       setError(null);
 
-      const league = leagues[leagueName];
-      if (!league) {
-        throw new Error(`Invalid league name: ${leagueName}`);
-      }
+      const url = `/todays-matches?key=${API_KEY}&date=${dateStr}`;
+      console.log("Fetching matches for date:", dateStr);
 
-      const seasonId = league.season_25_26;
-      const maxTime = Math.floor((Date.now() + 7 * 24 * 60 * 60 * 1000) / 1000);
-
-      const response = await fetch(
-        `/api/league-matches?key=${API_KEY}&season_id=${seasonId}`
-      );
+      const response = await fetch(url);
 
       if (response.ok) {
         const data = await response.json();
-        if (data.data) {
-          const upcomingMatches = data.data.filter(
-            (match) => match.date_unix <= maxTime
+        if (data.data && Array.isArray(data.data)) {
+          console.log(`Found ${data.data.length} matches for ${dateStr}`);
+
+          // Fetch competition details for each match using the match ID
+          const matchesWithCompetition = await Promise.all(
+            data.data.map(async (match) => {
+              try {
+                // Use the match.id to get full match details including competition_id
+                const matchDetailUrl = `/match?key=${API_KEY}&match_id=${match.id}`;
+                console.log(`Fetching details for match ${match.id}`);
+
+                const matchResponse = await fetch(matchDetailUrl);
+
+                if (matchResponse.ok) {
+                  const matchData = await matchResponse.json();
+                  console.log(`Match ${match.id} response:`, matchData);
+
+                  // The competition_id should be in the response
+                  // Try different possible locations for the competition_id
+                  const competitionId =
+                    matchData.competition_id ||
+                    matchData.data?.competition_id ||
+                    matchData.data?.[0]?.competition_id ||
+                    null;
+
+                  console.log(
+                    `Match ${match.id} has competition_id: ${competitionId}`
+                  );
+
+                  const competitionName = competitionId
+                    ? COMPETITION_MAP[competitionId] ||
+                      `Unknown Competition (ID: ${competitionId})`
+                    : "Unknown Competition";
+
+                  // Also extract team names if available
+                  const home_name =
+                    matchData.home_name ||
+                    matchData.data?.home_name ||
+                    matchData.data?.[0]?.home_name ||
+                    match.home_name ||
+                    `Team ${match.homeID}`;
+
+                  const away_name =
+                    matchData.away_name ||
+                    matchData.data?.away_name ||
+                    matchData.data?.[0]?.away_name ||
+                    match.away_name ||
+                    `Team ${match.awayID}`;
+
+                  return {
+                    ...match,
+                    competition_id: competitionId,
+                    competition_name: competitionName,
+                    home_name: home_name,
+                    away_name: away_name,
+                    date_unix: match.date_unix,
+                  };
+                } else {
+                  console.error(
+                    `Failed to fetch details for match ${match.id}: ${matchResponse.status}`
+                  );
+                  return {
+                    ...match,
+                    competition_name: "Unknown Competition",
+                    home_name: match.home_name || `Team ${match.homeID}`,
+                    away_name: match.away_name || `Team ${match.awayID}`,
+                    date_unix: match.date_unix,
+                  };
+                }
+              } catch (err) {
+                console.error(`Error fetching match ${match.id} details:`, err);
+                return {
+                  ...match,
+                  competition_name: "Unknown Competition",
+                  home_name: match.home_name || `Team ${match.homeID}`,
+                  away_name: match.away_name || `Team ${match.awayID}`,
+                  date_unix: match.date_unix,
+                };
+              }
+            })
           );
-          setMatches(upcomingMatches);
+
+          console.log("All matches with competitions:", matchesWithCompetition);
+
+          // Sort matches by time (we'll group them later)
+          const sortedMatches = matchesWithCompetition.sort((a, b) => {
+            return (a.date_unix || 0) - (b.date_unix || 0);
+          });
+
+          setMatches(sortedMatches);
         } else {
           setMatches([]);
         }
       } else {
-        throw new Error(`Failed to fetch matches for ${leagueName}`);
+        throw new Error(`Failed to fetch matches for ${displayDate}`);
       }
     } catch (err) {
       setError(err.message);
@@ -80,35 +198,37 @@ function App() {
       setLoadingDetails(true);
       setSelectedMatch(match);
 
-      const league = leagues[selectedLeague];
-      if (!league) {
-        throw new Error(`Season IDs not found for league: ${selectedLeague}`);
-      }
-
       let homePlayersMap = new Map();
       let awayPlayersMap = new Map();
 
-      for (const seasonId of [league.season_24_25, league.season_25_26]) {
+      // Try to get players from the competition/season
+      try {
+        const competitionId = match.competition_id;
         const leaguePlayersResponse = await fetch(
-          `/api/league-players?key=${API_KEY}&season_id=${seasonId}`
+          `/league-players?key=${API_KEY}&season_id=${competitionId}`
         );
-        const leaguePlayersData = await leaguePlayersResponse.json();
 
-        if (leaguePlayersData?.data) {
-          leaguePlayersData.data.forEach((player) => {
-            if (player.club_team_id?.toString() === match.homeID.toString()) {
-              if (!homePlayersMap.has(player.id)) {
-                homePlayersMap.set(player.id, player);
+        if (leaguePlayersResponse.ok) {
+          const leaguePlayersData = await leaguePlayersResponse.json();
+
+          if (leaguePlayersData?.data) {
+            leaguePlayersData.data.forEach((player) => {
+              if (player.club_team_id?.toString() === match.homeID.toString()) {
+                if (!homePlayersMap.has(player.id)) {
+                  homePlayersMap.set(player.id, player);
+                }
+              } else if (
+                player.club_team_id?.toString() === match.awayID.toString()
+              ) {
+                if (!awayPlayersMap.has(player.id)) {
+                  awayPlayersMap.set(player.id, player);
+                }
               }
-            } else if (
-              player.club_team_id?.toString() === match.awayID.toString()
-            ) {
-              if (!awayPlayersMap.has(player.id)) {
-                awayPlayersMap.set(player.id, player);
-              }
-            }
-          });
+            });
+          }
         }
+      } catch (err) {
+        console.log("Could not fetch league players:", err);
       }
 
       const fetchPlayerStats = async (playersMap) => {
@@ -116,25 +236,19 @@ function App() {
         for (const player of playersMap.values()) {
           try {
             const playerStatsResponse = await fetch(
-              `/api/player-stats?key=${API_KEY}&player_id=${player.id}`
+              `/player-stats?key=${API_KEY}&player_id=${player.id}`
             );
+
             if (playerStatsResponse.ok) {
               const playerStatsData = await playerStatsResponse.json();
 
-              // Filter the array for stats from our league's seasons
               if (
                 playerStatsData?.data &&
                 Array.isArray(playerStatsData.data)
               ) {
-                const relevantStats = playerStatsData.data.filter(
-                  (stat) =>
-                    stat.competition_id === leagues.season_24_25 ||
-                    stat.competition_id === leagues.season_25_26
-                );
-
-                // Get the highest cards_per_90_overall from relevant seasons
-                let bestStats = relevantStats[0] || {};
-                relevantStats.forEach((stat) => {
+                // Get the best stats from available seasons
+                let bestStats = playerStatsData.data[0] || {};
+                playerStatsData.data.forEach((stat) => {
                   if (
                     parseFloat(stat.cards_per_90_overall || 0) >
                     parseFloat(bestStats.cards_per_90_overall || 0)
@@ -173,7 +287,7 @@ function App() {
       setMatchDetails({
         homePlayers: homePlayersWithStats,
         awayPlayers: awayPlayersWithStats,
-        league_name: selectedLeague,
+        competition_name: match.competition_name || "Unknown Competition",
       });
     } catch (err) {
       console.error("Error fetching match details:", err);
@@ -187,42 +301,84 @@ function App() {
     setMatchDetails(null);
   };
 
-  const sortedMatches = matches.sort((a, b) => a.date_unix - b.date_unix);
-
   const formatDate = (unixTimestamp) => {
     const date = new Date(unixTimestamp * 1000);
-    return date.toLocaleDateString("en-US", {
-      weekday: "long",
-      month: "long",
-      day: "numeric",
-    });
+    return date.toDateString();
   };
 
   const formatTime = (unixTimestamp) => {
+    if (!unixTimestamp) return "Time TBD";
     const date = new Date(unixTimestamp * 1000);
-    return date.toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    return date.toLocaleTimeString();
   };
+
+  // Group matches by competition
+  const groupMatchesByCompetition = (matches) => {
+    const grouped = {};
+    matches.forEach((match) => {
+      const competition = match.competition_name || "Unknown Competition";
+      if (!grouped[competition]) {
+        grouped[competition] = [];
+      }
+      grouped[competition].push(match);
+    });
+
+    // Sort matches within each competition by time
+    Object.keys(grouped).forEach((competition) => {
+      grouped[competition].sort(
+        (a, b) => (a.date_unix || 0) - (b.date_unix || 0)
+      );
+    });
+
+    return grouped;
+  };
+
+  const groupedMatches = groupMatchesByCompetition(matches);
+
+  // Sort competitions by priority for display
+  const competitionPriority = {
+    "UEFA Champions League": 1,
+    "UEFA Europa League": 2,
+    "UEFA Europa Conference League": 3,
+    "Premier League": 4,
+    "La Liga": 5,
+    "Serie A": 6,
+    Bundesliga: 7,
+    "Ligue 1": 8,
+    Championship: 9,
+    "FA Cup": 10,
+    "League Cup": 11,
+    "Coppa Italia": 12,
+    "DFB Pokal": 13,
+    "DFL Super Cup": 14,
+    "Primavera Cup": 15,
+  };
+
+  const sortedCompetitions = Object.keys(groupedMatches).sort((a, b) => {
+    const priorityA = competitionPriority[a] || 99;
+    const priorityB = competitionPriority[b] || 99;
+    return priorityA - priorityB;
+  });
 
   return (
     <div className="app-container">
       <div className="main-content">
         <h1 className="app-title">⚽ Card Predictor</h1>
 
-        <div className="leagues-container card">
-          <h2>Select a League</h2>
-          <div className="leagues-grid">
-            {Object.keys(leagues).map((leagueName) => (
+        <div className="days-container card">
+          <h2>Select a Day</h2>
+          <div className="days-grid">
+            {next7Days.map((day, index) => (
               <button
-                key={leagueName}
-                className={`league-button ${
-                  selectedLeague === leagueName ? "active" : ""
-                }`}
-                onClick={() => fetchMatchesForLeague(leagueName)}
+                key={day.date}
+                className={`day-button ${
+                  selectedDate?.date === day.date ? "active" : ""
+                } ${day.isToday ? "today" : ""}`}
+                onClick={() => fetchMatchesForDate(day.date, day.displayDate)}
               >
-                {leagueName}
+                <div className="day-of-week">{day.dayOfWeek}</div>
+                <div className="day-date">{day.shortDate}</div>
+                {day.isToday && <div className="today-indicator">Today</div>}
               </button>
             ))}
           </div>
@@ -242,7 +398,7 @@ function App() {
           </div>
         )}
 
-        {selectedLeague && !loading && (
+        {selectedDate && !loading && (
           <div className="card">
             <h2
               style={{
@@ -251,30 +407,42 @@ function App() {
                 marginBottom: "1.5rem",
               }}
             >
-              Upcoming Matches for {selectedLeague} ({sortedMatches.length})
+              Matches for {selectedDate.displayDate} ({matches.length})
             </h2>
 
-            {sortedMatches.length === 0 ? (
+            {matches.length === 0 ? (
               <p className="text-center" style={{ color: "#666" }}>
-                No upcoming matches found for this league in the next 7 days.
+                No matches found for this day.
               </p>
             ) : (
-              <div className="fixtures-grid">
-                {sortedMatches.map((match, index) => (
-                  <div
-                    key={index}
-                    className="fixture-card clickable"
-                    onClick={() => fetchMatchDetails(match)}
-                  >
-                    <div className="fixture-league">{selectedLeague}</div>
-                    <div className="fixture-date">
-                      {formatDate(match.date_unix)} •{" "}
-                      {formatTime(match.date_unix)}
+              <div className="competitions-container">
+                {sortedCompetitions.map((competition) => (
+                  <div key={competition} className="competition-section">
+                    <h3 className="competition-title">
+                      {competition} ({groupedMatches[competition].length})
+                    </h3>
+                    <div className="fixtures-grid">
+                      {groupedMatches[competition].map((match, index) => (
+                        <div
+                          key={`${competition}-${index}`}
+                          className="fixture-card clickable"
+                          onClick={() => fetchMatchDetails(match)}
+                        >
+                          <div className="fixture-league">{competition}</div>
+                          <div className="fixture-date">
+                            {formatTime(match.date_unix)}
+                          </div>
+                          <div className="fixture-team">
+                            {match.home_name || `Team ${match.homeID}`}
+                          </div>
+                          <div className="fixture-vs">vs</div>
+                          <div className="fixture-team">
+                            {match.away_name || `Team ${match.awayID}`}
+                          </div>
+                          <div className="click-hint">Click for details</div>
+                        </div>
+                      ))}
                     </div>
-                    <div className="fixture-team">{match.home_name}</div>
-                    <div className="fixture-vs">vs</div>
-                    <div className="fixture-team">{match.away_name}</div>
-                    <div className="click-hint">Click for details</div>
                   </div>
                 ))}
               </div>
@@ -287,7 +455,8 @@ function App() {
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
               <div className="modal-header">
                 <h2>
-                  {selectedMatch.home_name} vs {selectedMatch.away_name}
+                  {selectedMatch.home_name || `Team ${selectedMatch.homeID}`} vs{" "}
+                  {selectedMatch.away_name || `Team ${selectedMatch.awayID}`}
                 </h2>
                 <button className="close-button" onClick={closeMatchDetails}>
                   ×
@@ -302,7 +471,8 @@ function App() {
                 <div className="modal-body">
                   <div className="match-info">
                     <p>
-                      <strong>League:</strong> {matchDetails.league_name}
+                      <strong>Competition:</strong>{" "}
+                      {matchDetails.competition_name}
                     </p>
                     <p>
                       <strong>Date:</strong>{" "}
@@ -313,86 +483,94 @@ function App() {
 
                   <div className="teams-container">
                     <div className="team-section">
-                      <h3>{selectedMatch.home_name}</h3>
+                      <h3>
+                        {selectedMatch.home_name ||
+                          `Team ${selectedMatch.homeID}`}
+                      </h3>
                       <h4>Players</h4>
                       <div className="players-list">
-                        {matchDetails.homePlayers.map((player, index) => (
-                          <div key={index} className="player-card-detailed">
-                            <div className="player-header">
-                              <span className="player-name">
-                                {player.known_as}
-                              </span>
+                        {matchDetails.homePlayers.length > 0 ? (
+                          matchDetails.homePlayers.map((player, index) => (
+                            <div key={index} className="player-card-detailed">
+                              <div className="player-header">
+                                <span className="player-name">
+                                  {player.known_as}
+                                </span>
+                              </div>
+                              <div className="player-stats">
+                                {player.stats && (
+                                  <>
+                                    <div className="stat-row highlight">
+                                      <span className="stat-label">
+                                        Cards per 90:
+                                      </span>
+                                      <span className="stat-value">
+                                        {player.stats.cards_per_90_overall ||
+                                          "0.00"}
+                                      </span>
+                                    </div>
+                                    <div className="stat-row">
+                                      <span className="stat-label">
+                                        Mins per Card:
+                                      </span>
+                                      <span className="stat-value">
+                                        {player.stats.min_per_card_overall ||
+                                          "N/A"}
+                                      </span>
+                                    </div>
+                                  </>
+                                )}
+                              </div>
                             </div>
-                            <div className="player-stats">
-                              {player.stats && (
-                                <>
-                                  <div className="stat-row highlight">
-                                    <span className="stat-label">
-                                      Cards per 90:
-                                    </span>
-                                    <span className="stat-value">
-                                      {player.stats.cards_per_90_overall ||
-                                        "0.00"}
-                                    </span>
-                                  </div>
-                                  <div className="stat-row">
-                                    <span className="stat-label">
-                                      Mins per Card:
-                                    </span>
-                                    <span className="stat-value">
-                                      {player.stats.min_per_card_overall ||
-                                        "N/A"}
-                                    </span>
-                                  </div>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                        {matchDetails.homePlayers.length === 0 && (
+                          ))
+                        ) : (
                           <p className="no-players">No players found.</p>
                         )}
                       </div>
                     </div>
 
                     <div className="team-section">
-                      <h3>{selectedMatch.away_name}</h3>
+                      <h3>
+                        {selectedMatch.away_name ||
+                          `Team ${selectedMatch.awayID}`}
+                      </h3>
                       <h4>Players</h4>
                       <div className="players-list">
-                        {matchDetails.awayPlayers.map((player, index) => (
-                          <div key={index} className="player-card-detailed">
-                            <div className="player-header">
-                              <span className="player-name">
-                                {player.known_as}
-                              </span>
+                        {matchDetails.awayPlayers.length > 0 ? (
+                          matchDetails.awayPlayers.map((player, index) => (
+                            <div key={index} className="player-card-detailed">
+                              <div className="player-header">
+                                <span className="player-name">
+                                  {player.known_as}
+                                </span>
+                              </div>
+                              <div className="player-stats">
+                                {player.stats && (
+                                  <>
+                                    <div className="stat-row highlight">
+                                      <span className="stat-label">
+                                        Cards per 90:
+                                      </span>
+                                      <span className="stat-value">
+                                        {player.stats.cards_per_90_overall ||
+                                          "0.00"}
+                                      </span>
+                                    </div>
+                                    <div className="stat-row">
+                                      <span className="stat-label">
+                                        Mins per Card:
+                                      </span>
+                                      <span className="stat-value">
+                                        {player.stats.min_per_card_overall ||
+                                          "N/A"}
+                                      </span>
+                                    </div>
+                                  </>
+                                )}
+                              </div>
                             </div>
-                            <div className="player-stats">
-                              {player.stats && (
-                                <>
-                                  <div className="stat-row highlight">
-                                    <span className="stat-label">
-                                      Cards per 90:
-                                    </span>
-                                    <span className="stat-value">
-                                      {player.stats.cards_per_90_overall ||
-                                        "0.00"}
-                                    </span>
-                                  </div>
-                                  <div className="stat-row">
-                                    <span className="stat-label">
-                                      Mins per Card:
-                                    </span>
-                                    <span className="stat-value">
-                                      {player.stats.min_per_card_overall ||
-                                        "N/A"}
-                                    </span>
-                                  </div>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                        {matchDetails.awayPlayers.length === 0 && (
+                          ))
+                        ) : (
                           <p className="no-players">No players found.</p>
                         )}
                       </div>

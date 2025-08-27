@@ -31,37 +31,43 @@
   text-align: center;
 }
 
-/* League Selection Styles */
-.leagues-container {
+/* Days Selection Styles */
+.days-container {
   text-align: center;
 }
 
-.leagues-container h2 {
+.days-container h2 {
   color: #1f2937;
   font-size: 1.5rem;
   margin-bottom: 20px;
 }
 
-.leagues-grid {
+.days-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 15px;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 12px;
   margin-top: 20px;
 }
 
-.league-button {
-  padding: 15px 20px;
+.day-button {
+  padding: 16px 12px;
   background-color: #ffffff;
   border: 2px solid #e5e7eb;
-  border-radius: 10px;
-  font-size: 1rem;
+  border-radius: 12px;
+  font-size: 0.9rem;
   font-weight: 600;
   color: #374151;
   cursor: pointer;
   transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  position: relative;
+  min-height: 80px;
 }
 
-.league-button:hover {
+.day-button:hover {
   background-color: #3b82f6;
   color: white;
   border-color: #3b82f6;
@@ -69,10 +75,71 @@
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
 }
 
-.league-button.active {
+.day-button.active {
   background-color: #3b82f6;
   color: white;
   border-color: #3b82f6;
+}
+
+.day-button.today {
+  border-color: #f59e0b;
+}
+
+.day-button.today:not(.active) {
+  background-color: #fffbeb;
+  color: #92400e;
+}
+
+.day-button.today.active {
+  background-color: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+}
+
+.day-of-week {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.day-date {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.today-indicator {
+  position: absolute;
+  bottom: 4px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #f59e0b;
+}
+
+.day-button.active .today-indicator {
+  color: #fbbf24;
+}
+
+/* Competition Sections */
+.competitions-container {
+  margin-top: 20px;
+}
+
+.competition-section {
+  margin-bottom: 32px;
+}
+
+.competition-title {
+  color: #1f2937;
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  background: #f3f4f6;
+  border-radius: 8px;
+  border-left: 4px solid #3b82f6;
 }
 
 /* Fixtures Grid */
@@ -358,16 +425,27 @@
 
 /* Responsive Design */
 @media (max-width: 768px) {
+  .days-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+
+  .day-button {
+    padding: 12px 8px;
+    min-height: 70px;
+    font-size: 0.8rem;
+  }
+
+  .day-date {
+    font-size: 0.9rem;
+  }
+
   .teams-container {
     grid-template-columns: 1fr;
     gap: 20px;
   }
 
   .fixtures-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .leagues-grid {
     grid-template-columns: 1fr;
   }
 
@@ -378,5 +456,16 @@
 
   .app-title {
     font-size: 2rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .days-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .competition-title {
+    font-size: 1.1rem;
+    padding: 10px 12px;
   }
 }
