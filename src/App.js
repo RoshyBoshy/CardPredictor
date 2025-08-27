@@ -15,35 +15,114 @@ function App() {
 
   const API_BASE_URL = "/api";
 
-  // Competition ID to Name mapping
-  const COMPETITION_MAP = {
-    // England
-    15050: "Premier League",
-    14930: "Championship",
-    15137: "League Cup",
-    15238: "FA Cup",
+  const COMPETITION_MAP = [
+    // 2024/2025 Season
+    {
+      id: 12325,
+      name: "Premier League",
+      country: "England",
+      season: "2024/2025",
+    },
+    {
+      id: 12451,
+      name: "Championship",
+      country: "England",
+      season: "2024/2025",
+    },
+    { id: 12473, name: "League Cup", country: "England", season: "2024/2025" },
+    { id: 13698, name: "FA Cup", country: "England", season: "2024/2025" },
+    {
+      id: 12321,
+      name: "UEFA Champions League",
+      country: "Europe",
+      season: "2024/2025",
+    },
+    {
+      id: 12327,
+      name: "UEFA Europa League",
+      country: "Europe",
+      season: "2024/2025",
+    },
+    {
+      id: 12278,
+      name: "UEFA Europa Conference League",
+      country: "Europe",
+      season: "2024/2025",
+    },
+    { id: 12337, name: "Ligue 1", country: "France", season: "2024/2025" },
+    {
+      id: 13729,
+      name: "Coupe de France",
+      country: "France",
+      season: "2024/2025",
+    },
+    { id: 12529, name: "Bundesliga", country: "Germany", season: "2024/2025" },
+    {
+      id: 12081,
+      name: "DFL Super cup",
+      country: "Germany",
+      season: "2024/2025",
+    },
+    { id: 12057, name: "DFB Pokal", country: "Germany", season: "2024/2025" },
+    { id: 12530, name: "Serie A", country: "Italy", season: "2024/2025" },
+    { id: 12579, name: "Coppa Italia", country: "Italy", season: "2024/2025" },
+    { id: 12609, name: "Primavera Cup", country: "Italy", season: "2024/2025" },
+    { id: 12316, name: "La Liga", country: "Spain", season: "2024/2025" },
+    { id: 13624, name: "Copa del Rey", country: "Spain", season: "2024/2025" },
+    {
+      id: 12535,
+      name: "Supercopa de Espana",
+      country: "Spain",
+      season: "2024/2025",
+    },
 
-    // Europe
-    14924: "UEFA Champions League",
-    15002: "UEFA Europa League",
-    14904: "UEFA Europa Conference League",
-
-    // France
-    14932: "Ligue 1",
-
-    // Germany
-    14968: "Bundesliga",
-    15034: "DFL Super Cup",
-    15035: "DFB Pokal",
-
-    // Italy
-    15068: "Serie A",
-    15037: "Coppa Italia",
-    15866: "Primavera Cup",
-
-    // Spain
-    14956: "La Liga",
-  };
+    // 2025/2026 Season
+    {
+      id: 15050,
+      name: "Premier League",
+      country: "England",
+      season: "2025/2026",
+    },
+    {
+      id: 14930,
+      name: "Championship",
+      country: "England",
+      season: "2025/2026",
+    },
+    { id: 15137, name: "League Cup", country: "England", season: "2025/2026" },
+    { id: 15238, name: "FA Cup", country: "England", season: "2025/2026" },
+    {
+      id: 14924,
+      name: "UEFA Champions League",
+      country: "Europe",
+      season: "2025/2026",
+    },
+    {
+      id: 15002,
+      name: "UEFA Europa League",
+      country: "Europe",
+      season: "2025/2026",
+    },
+    {
+      id: 14904,
+      name: "UEFA Europa Conference League",
+      country: "Europe",
+      season: "2025/2026",
+    },
+    { id: 14932, name: "Ligue 1", country: "France", season: "2025/2026" },
+    { id: 14968, name: "Bundesliga", country: "Germany", season: "2025/2026" },
+    {
+      id: 15034,
+      name: "DFL Super cup",
+      country: "Germany",
+      season: "2025/2026",
+    },
+    { id: 15035, name: "DFB Pokal", country: "Germany", season: "2025/2026" },
+    { id: 15068, name: "Serie A", country: "Italy", season: "2025/2026" },
+    { id: 15037, name: "Coppa Italia", country: "Italy", season: "2025/2026" },
+    { id: 15866, name: "Primavera Cup", country: "Italy", season: "2025/2026" },
+    { id: 14956, name: "La Liga", country: "Spain", season: "2025/2026" },
+  ];
 
   // Generate next 7 days
   const getNext7Days = () => {
